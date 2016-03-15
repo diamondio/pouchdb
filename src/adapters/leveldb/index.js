@@ -194,12 +194,13 @@ function LevelPouch(opts, callback) {
     db = dbStore.get(name);
     afterDBCreated();
   } else {
-    dbStore.set(name, sublevel(levelup(name, opts, function (err) {
+    dbStore.set(name, sublevel(levelup(name, opts, function (err, leveldb) {
       /* istanbul ignore if */
       if (err) {
         dbStore.delete(name);
         return callback(err);
       }
+      api.leveldb = leveldb;
       db = dbStore.get(name);
       db._docCount  = -1;
       db._queue = new Deque();
@@ -947,6 +948,7 @@ function LevelPouch(opts, callback) {
         if (opts.include_docs) {
           var seq = metadata.rev_map[winningRev];
           stores.bySeqStore.get(formatSeq(seq), function (err, data) {
+            if (err) return next();
             allDocsInner(data);
           });
         }
@@ -1112,6 +1114,7 @@ function LevelPouch(opts, callback) {
         var winningSeq = metadata.rev_map[winningRev];
 
         stores.bySeqStore.get(formatSeq(winningSeq), function (err, doc) {
+          if (err) return next();
           onGetWinningDoc(doc);
         });
       }
