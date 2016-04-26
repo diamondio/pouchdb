@@ -301,6 +301,7 @@ function idbBulkDocs(dbOpts, req, opts, api, idb, idbChanges, callback) {
       if (!att.stub) {
         var data = att.data;
         delete att.data;
+        att.revpos = parseInt(winningRev, 10);
         var digest = att.digest;
         saveAttachment(digest, data, attachmentSaved);
       } else {
@@ -353,7 +354,7 @@ function idbBulkDocs(dbOpts, req, opts, api, idb, idbChanges, callback) {
 
 
     var getKeyReq = attachStore.count(digest);
-    getKeyReq.onsuccess = function(e) {
+    getKeyReq.onsuccess = function (e) {
       var count = e.target.result;
       if (count) {
         return callback(); // already exists

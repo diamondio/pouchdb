@@ -30,6 +30,10 @@
 
   "rules": {
     "no-empty": 0,
-    "no-console": 0
+    "no-console": 0,
+    "semi": ["error", "always"],
+    "curly": ["error", "all"],
+    "space-unary-ops": ["error", {"words": true}],
+    "space-before-function-paren": ["error", {"anonymous": "always", "named": "never"}]
   }
 }

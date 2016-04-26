@@ -93,9 +93,9 @@ adapters.forEach(function (adapter) {
           data: testUtils.btoa('text1')
         }
       }};
-      return db.put(doc).then(function() {
+      return db.put(doc).then(function () {
         done('Should not succeed');
-      }).catch(function(err) {
+      }).catch(function (err) {
         err.name.should.equal('bad_request');
         done();
       });
@@ -228,7 +228,7 @@ adapters.forEach(function (adapter) {
       var db = new PouchDB(dbs.name);
       var docs = [binAttDoc, binAttDoc2, pngAttDoc];
       return db.bulkDocs(docs).then(function () {
-        return PouchDB.utils.Promise.all(docs.map(function(doc) {
+        return PouchDB.utils.Promise.all(docs.map(function (doc) {
           var attName = Object.keys(doc._attachments)[0];
           var expected = doc._attachments[attName];
           return db.get(doc._id, {
@@ -253,7 +253,7 @@ adapters.forEach(function (adapter) {
       var db = new PouchDB(dbs.name);
       var docs = [binAttDoc, binAttDoc2, pngAttDoc, {_id: 'foo'}];
       return db.bulkDocs(docs).then(function () {
-        return PouchDB.utils.Promise.all(docs.map(function(doc) {
+        return PouchDB.utils.Promise.all(docs.map(function (doc) {
           var atts = doc._attachments;
           var attName = atts && Object.keys(atts)[0];
           var expected = atts && atts[attName];
@@ -3164,6 +3164,82 @@ adapters.forEach(function (adapter) {
         });
       });
     }
+    
+    it('#2709 `revpos` with putAttachment', function (done) {
+      var db = new PouchDB(dbs.name);
+      db.putAttachment('a', 'one', '', testUtils.btoa('one'), 'text/plain', function () {
+        db.get('a', function (err, doc) {
+          should.exist(doc._attachments.one.revpos);
+          doc._attachments.one.revpos.should.equal(1);
+          db.putAttachment('a', 'two', doc._rev, testUtils.btoa('two'), 'text/plain', function () {
+            db.get('a', function (err, doc) {
+              should.exist(doc._attachments.two.revpos);
+              doc._attachments.two.revpos.should.equal(2);
+              doc._attachments.one.revpos.should.equal(1);
+              db.putAttachment('a', 'one', doc._rev, testUtils.btoa('one-changed'), 'text/plain', function () {
+                db.get('a', function (err, doc) {
+                  doc._attachments.one.revpos.should.equal(3);
+                  doc._attachments.two.revpos.should.equal(2);
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    
+    it('#2709 `revpos` with inline attachment', function (done) {
+      var db = new PouchDB(dbs.name);
+      var doc = {
+        _id: 'a',
+        _attachments: {
+          one: {
+            content_type: 'text/plain',
+            data: testUtils.btoa('one')
+          }
+        }
+      };
+      db.put(doc, function () {
+        db.get('a', function (err, doc) {
+          should.exist(doc._attachments.one.revpos);
+          doc._attachments.one.revpos.should.equal(1);
+          doc._attachments.two = {
+            content_type: 'text/plain',
+            data: testUtils.btoa('two')
+          };
+          db.put(doc, function () {
+            db.get('a', function (err, doc) {
+              should.exist(doc._attachments.two.revpos);
+              doc._attachments.two.revpos.should.equal(2);
+              doc._attachments.one.revpos.should.equal(1);
+              delete doc._attachments.one.stub;
+              doc._attachments.one.data = testUtils.btoa('one-changed');
+              db.put(doc, function () {
+                db.get('a', function (err, doc) {
+                  doc._attachments.one.revpos.should.equal(3);
+                  doc._attachments.two.revpos.should.equal(2);
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+
+    it('#2709 `revpos` with allDocs', function (done) {
+      var db = new PouchDB(dbs.name);
+      db.putAttachment('a', 'one', '', testUtils.btoa('one'), 'text/plain', function () {
+        db.allDocs({ keys: ['a'], include_docs: true }, function (err, docs) {
+          var doc = docs.rows[0].doc;
+          should.exist(doc._attachments.one.revpos);
+          doc._attachments.one.revpos.should.equal(1);
+          done();
+        });
+      });
+    });
+    
   });
 });
 
@@ -3375,7 +3451,7 @@ repl_adapters.forEach(function (adapters) {
       var db = new PouchDB(dbs.name);
       var remote = new PouchDB(dbs.remote);
 
-      return remote.bulkDocs({ docs: docs1 }).then(function() {
+      return remote.bulkDocs({ docs: docs1 }).then(function () {
         return db.replicate.from(remote);
       }).then(function () {
         return db.get('bin_doc', {attachments: true, binary: true});
@@ -3775,7 +3851,7 @@ repl_adapters.forEach(function (adapters) {
 
       db.put(doc).then(function () {
         return db.get('x');
-      }).then(function(doc){
+      }).then(function (doc){
         var digests = Object.keys(doc._attachments).map(function (a) {
           return doc._attachments[a].digest;
         });

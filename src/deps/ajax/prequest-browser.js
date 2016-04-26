@@ -12,12 +12,16 @@ function ajax(opts, callback) {
   var isIE = ua.indexOf('msie') !== -1;
   var isEdge = ua.indexOf('edge') !== -1;
 
-  var shouldCacheBust = (isSafari && opts.method === 'POST') ||
-    ((isIE || isEdge) && opts.method === 'GET');
+  // it appears the new version of safari also caches GETs,
+  // see https://github.com/pouchdb/pouchdb/issues/5010
+  var shouldCacheBust = (isSafari ||
+    ((isIE || isEdge) && opts.method === 'GET'));
 
   var cache = 'cache' in opts ? opts.cache : true;
 
-  if (shouldCacheBust || !cache) {
+  var isBlobUrl = /^blob:/.test(opts.url); // don't append nonces for blob URLs
+
+  if (!isBlobUrl && (shouldCacheBust || !cache)) {
     var hasArgs = opts.url.indexOf('?') !== -1;
     opts.url += (hasArgs ? '&' : '?') + '_nonce=' + Date.now();
   }
