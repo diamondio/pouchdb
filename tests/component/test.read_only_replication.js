@@ -1,7 +1,7 @@
 'use strict';
 
-var PouchDB = require('../../lib');
-var Checkpointer = require('../../lib/extras/checkpointer');
+var PouchDB = require('../../packages/pouchdb-for-coverage');
+var Checkpointer = PouchDB.utils.checkpointer;
 
 var express = require('express');
 var bodyParser = require('body-parser');
@@ -12,9 +12,13 @@ app.use(bodyParser.json());
 
 var replicationDoc;
 
-function reject(req, res) {
-  replicationDoc = req.body.docs[0];
-  res.status(403).send({error: true, message: 'Unauthorized'});
+function reject(req, res, next) {
+  if (req.body.docs) {
+    replicationDoc = req.body.docs[0];
+    res.status(403).send({error: true, message: 'Unauthorized'});
+  } else {
+    next();
+  }
 }
 
 app.post('*', reject);
@@ -41,8 +45,9 @@ describe('test.read_only_replication.js', function () {
     // These are the same, but one goes over HTTP so that we have the
     // above access control
     var remote = new PouchDB('remote');
-    var remoteHTTP = new PouchDB('http://127.0.0.1:' + server.address().port +
-                                 '/remote');
+    var remoteName = 'http://127.0.0.1:' + server.address().port +
+      '/remote';
+    var remoteHTTP = new PouchDB(remoteName);
 
     var expectedLastSeq;
     var checkpointer;
@@ -53,7 +58,6 @@ describe('test.read_only_replication.js', function () {
       expectedLastSeq = replicationResult.last_seq;
       checkpointer = new Checkpointer(remoteHTTP, db, replicationDoc._id,
                                       replicationResult);
-
       return checkpointer.getCheckpoint().then(function (actualLastSeq) {
         actualLastSeq.should.equal(expectedLastSeq);
       });

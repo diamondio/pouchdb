@@ -30,14 +30,14 @@ adapters.forEach(function (adapter) {
         db.get(info.id, function (err, doc) {
           doc.should.have.property('test');
           db.get(info.id + 'asdf', function (err) {
-            err.status.should.equal(PouchDB.Errors.MISSING_DOC.status,
+            err.status.should.equal(testUtils.errors.MISSING_DOC.status,
                                     'correct error status returned');
-            err.name.should.equal(PouchDB.Errors.MISSING_DOC.name,
+            err.name.should.equal(testUtils.errors.MISSING_DOC.name,
                                   'correct error name returned');
-            err.message.should.equal(PouchDB.Errors.MISSING_DOC.message,
+            err.message.should.equal(testUtils.errors.MISSING_DOC.message,
                                     'correct error message returned');
             // todo: does not work in pouchdb-server.
-            // err.reason.should.equal(PouchDB.Errors.MISSING_DOC.reason,
+            // err.reason.should.equal(testUtils.errors.MISSING_DOC.reason,
             //                           'correct error reason returned');
             done();
           });
@@ -53,14 +53,14 @@ adapters.forEach(function (adapter) {
       }, function (err, info) {
         db.get(info.id, function () {
           db.get(info.id + 'asdf', function (err) {
-            err.status.should.equal(PouchDB.Errors.MISSING_DOC.status,
+            err.status.should.equal(testUtils.errors.MISSING_DOC.status,
                                     'correct error status returned');
-            err.name.should.equal(PouchDB.Errors.MISSING_DOC.name,
+            err.name.should.equal(testUtils.errors.MISSING_DOC.name,
                                   'correct error name returned');
-            err.message.should.equal(PouchDB.Errors.MISSING_DOC.message,
+            err.message.should.equal(testUtils.errors.MISSING_DOC.message,
                                     'correct error message returned');
             // todo: does not work in pouchdb-server.
-            // err.reason.should.equal(PouchDB.Errors.MISSING_DOC.reason,
+            // err.reason.should.equal(testUtils.errors.MISSING_DOC.reason,
             //                           'correct error reason returned');
             done();
           });
@@ -76,15 +76,10 @@ adapters.forEach(function (adapter) {
           _rev: info.rev
         }, function () {
           db.get(info.id, function (err) {
-            err.status.should.equal(PouchDB.Errors.MISSING_DOC.status,
+            err.status.should.equal(testUtils.errors.MISSING_DOC.status,
                                       'correct error status returned');
-            err.name.should.equal(PouchDB.Errors.MISSING_DOC.name,
+            err.name.should.equal(testUtils.errors.MISSING_DOC.name,
                                       'correct error name returned');
-            err.message.should.equal(PouchDB.Errors.MISSING_DOC.message,
-                                      'correct error message returned');
-            // todo: does not work in pouchdb-server.
-            // err.reason.should.equal(PouchDB.Errors.MISSING_DOC.reason,
-            //                          'correct error reason returned');
             done();
           });
         });
@@ -109,68 +104,67 @@ adapters.forEach(function (adapter) {
     });
 
     it('Testing get with rev', function (done) {
-      new PouchDB(dbs.name, function (err, db) {
-        testUtils.writeDocs(db, JSON.parse(JSON.stringify(origDocs)),
-          function () {
-          db.get('3', function (err, parent) {
-            // add conflicts
-            var pRevId = parent._rev.split('-')[1];
-            var conflicts = [
-              {
-                _id: '3',
-                _rev: '2-aaa',
-                value: 'x',
-                _revisions: {
-                  start: 2,
-                  ids: [
-                    'aaa',
-                    pRevId
-                  ]
-                }
-              },
-              {
-                _id: '3',
-                _rev: '3-bbb',
-                value: 'y',
-                _deleted: true,
-                _revisions: {
-                  start: 3,
-                  ids: [
-                    'bbb',
-                    'some',
-                    pRevId
-                  ]
-                }
-              },
-              {
-                _id: '3',
-                _rev: '4-ccc',
-                value: 'z',
-                _revisions: {
-                  start: 4,
-                  ids: [
-                    'ccc',
-                    'even',
-                    'more',
-                    pRevId
-                  ]
-                }
+      var db = new PouchDB(dbs.name);
+      var docs = JSON.parse(JSON.stringify(origDocs));
+      testUtils.writeDocs(db, docs, function () {
+        db.get('3', function (err, parent) {
+          // add conflicts
+          var pRevId = parent._rev.split('-')[1];
+          var conflicts = [
+            {
+              _id: '3',
+              _rev: '2-aaa',
+              value: 'x',
+              _revisions: {
+                start: 2,
+                ids: [
+                  'aaa',
+                  pRevId
+                ]
               }
-            ];
-            db.put(conflicts[0], { new_edits: false }, function () {
-              db.put(conflicts[1], { new_edits: false }, function () {
-                db.put(conflicts[2], { new_edits: false }, function () {
-                  db.get('3', { rev: '2-aaa' }, function (err, doc) {
-                    doc._rev.should.equal('2-aaa');
-                    doc.value.should.equal('x');
-                    db.get('3', { rev: '3-bbb' }, function (err, doc) {
-                      doc._rev.should.equal('3-bbb');
-                      doc.value.should.equal('y');
-                      db.get('3', { rev: '4-ccc' }, function (err, doc) {
-                        doc._rev.should.equal('4-ccc');
-                        doc.value.should.equal('z');
-                        done();
-                      });
+            },
+            {
+              _id: '3',
+              _rev: '3-bbb',
+              value: 'y',
+              _deleted: true,
+              _revisions: {
+                start: 3,
+                ids: [
+                  'bbb',
+                  'some',
+                  pRevId
+                ]
+              }
+            },
+            {
+              _id: '3',
+              _rev: '4-ccc',
+              value: 'z',
+              _revisions: {
+                start: 4,
+                ids: [
+                  'ccc',
+                  'even',
+                  'more',
+                  pRevId
+                ]
+              }
+            }
+          ];
+          db.put(conflicts[0], { new_edits: false }, function () {
+            db.put(conflicts[1], { new_edits: false }, function () {
+              db.put(conflicts[2], { new_edits: false }, function () {
+                db.get('3', { rev: '2-aaa' }, function (err, doc) {
+                  doc._rev.should.equal('2-aaa');
+                  doc.value.should.equal('x');
+                  db.get('3', { rev: '3-bbb' }, function (err, doc) {
+                    doc._rev.should.equal('3-bbb');
+                    doc.value.should.equal('y');
+                    db.get('3', { rev: '4-ccc' }, function (err, doc) {
+                      doc._rev.should.equal('4-ccc');
+                      doc.value.should.equal('z');
+                      done();
                     });
                   });
                 });
@@ -395,7 +389,7 @@ adapters.forEach(function (adapter) {
         });
       }
 
-      return PouchDB.utils.Promise.all(tasks.map(function (task) {
+      return testUtils.Promise.all(tasks.map(function (task) {
         return getDocWithDefault(db, task, {foo: 'bar'});
       }));
     });
@@ -433,7 +427,7 @@ adapters.forEach(function (adapter) {
         });
       }
 
-      return PouchDB.utils.Promise.all(tasks.map(function (task) {
+      return testUtils.Promise.all(tasks.map(function (task) {
         return getDocWithDefault(db, task, {foo: 'bar'});
       }));
     });
