@@ -25,6 +25,9 @@ if [ $COVERAGE ]; then
     TESTS_PATH="tests/{unit,integration,mapreduce,component}/test*.js"
 fi
 
+if [ ! -z $TRAVIS ]; then
+    source bin/npm-pack-on-travis.sh
+fi
 
 if [ $PERF ]; then
     node tests/performance/index.js
@@ -44,5 +47,7 @@ else
         --reporter=$REPORTER \
         --grep=$GREP \
         $TESTS_PATH
+
+    ./node_modules/.bin/istanbul check-coverage --line 100
 fi
 
